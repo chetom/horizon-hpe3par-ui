@@ -1,0 +1,7 @@
+{
+    "id": "horizon-hpe3par-ui",
+    "filter": "openstack",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Hewlett_Packard_Enterprise_logo.svg/530px-Hewlett_Packard_Enterprise_logo.svg.png",
+    "featured": 3,
+    "priority": 2
+}
