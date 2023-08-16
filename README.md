@@ -1,5 +1,5 @@
 # horizon-hpe3par-ui
-wykorzystano kod
+based on 
 author = Pure Storage
 version = 1.0.0
 author_email = openstack-dev@purestorage.com
