@@ -1,6 +1,6 @@
 from django.conf import settings
 import logging
-from hp3parclient import client, exceptions
+from hpe3parclient import client, exceptions
 import re
 
 from openstack_dashboard.api import base
@@ -16,8 +16,7 @@ SIZE_KEYS = [
     'volumes',
     'total',
     'shared_space',
-    'input_per_sec',
-    'output_per_sec',
+    'bandwidth',
 ]
 RATIO_KEYS = [
     'data_reduction',
@@ -25,7 +24,11 @@ RATIO_KEYS = [
     'total_reduction'
 ]
 
-class ErrorStateArray(client.HP3ParClient):
+
+def adjust_size(mib):
+    return mib / (1024 ** 2)
+
+class ErrorStateArray(client.HPE3ParClient):
     def __init__(self, target, e):
         self._target = target
         self.error = e
@@ -47,11 +50,12 @@ class FlashArrayAPI(object):
 
     def _get_array_from_conf(self, conf):
         try:
-            array = client.HP3ParClient(conf['wsapi_url'])
+            array = client.HPE3ParClient(conf['wsapi_url'])
+            array.setSSHOptions(ip=conf['ssh_ip'], login=conf['ssh_user'], password=conf['ssh_password'])
             array.login(conf['wsapi_user'], conf['wsapi_password'])
             array.error = None
             return array
-        except exceptions.ClientException as e:
+        except Exception as e:
             LOG.warning('Unable to create HPE 3Par FlashArray client: %s'
                         % str(e))
             return ErrorStateArray(conf['wsapi_url'], 'Failed to connect')
@@ -136,95 +140,80 @@ class FlashArrayAPI(object):
     #     # TODO: Lookup the purity host and return perf info and connected volumes
     #     return {}
 
-    # def get_total_stats(self):
-    #     stats = {}
-    #     arrays = self._array_id_list
+    def get_total_stats(self):
+        stats = {}
+        arrays = self._array_id_list
 
-    #     for array_id in arrays:
-    #         array_stats = self.get_array_stats(array_id)
-    #         for key in array_stats:
-    #             if key in stats:
-    #                 stats[key] += array_stats[key]
-    #             else:
-    #                 stats[key] = array_stats[key]
+        for array_id in arrays:
+            array_stats = self.get_array_stats(array_id)
+            for key in array_stats:
+                if key in stats:
+                    stats[key] += array_stats[key]
+                else:
+                    stats[key] = array_stats[key]
 
-    #     LOG.debug('Found total stats for flash arrays: %s' % stats)
-    #     return stats
+        LOG.debug('Found total stats for flash arrays: %s' % stats)
+        return stats
 
-    # def get_array_stats(self, array_id):
-    #     array = self._get_array(array_id)
+    def get_array_stats(self, array_id):
+        array = self._get_array(array_id)
 
-    #     total_used = 0
-    #     total_available = 0
-    #     total_volume_count = 0
-    #     total_snapshot_count = 0
-    #     total_host_count = 0
-    #     total_pgroup_count = 0
-    #     available_volume_count = 0
-    #     available_snapshot_count = 0
-    #     available_host_count = 0
-    #     available_pgroup_count = 0
+        total_used = 0
+        total_available = 0
+        total_volume_count = 0
+        total_vluns_count = 0
+        available_volume_count = 0
+        available_vluns_count = 0
 
-    #     if not array.error:
-    #         info = array.get()
-    #         array_volume_cap = 500
-    #         array_snapshot_cap = 5000
-    #         array_host_cap = 50
-    #         array_pgroup_cap = 50
-    #         version = info['version'].split('.')
-    #         if ((int(version[0]) == 4 and int(version[1]) >= 8) or
-    #                 (int(version[0]) > 4)):
-    #             array_volume_cap = 5000
-    #             array_snapshot_cap = 50000
-    #             array_pgroup_cap = 250
-    #             array_host_cap = 500
-    #         if ((int(version[0]) == 5 and int(version[1]) >= 3)):
-    #             array_volume_cap = 10000
-    #         if (int(version[0]) > 5):
-    #             array_volume_cap = 20000
-    #             array_snapshot_cap = 100000
-    #             array_host_cap = 1000
+        if not array.error:
+            info = {}
+            array_volume_cap = 16384
+            array_vluns_cap = 131072
+            
+            available_volume_count += array_volume_cap
+            available_vluns_count += array_vluns_cap
+            
+            total_volume_count += array.getVolumes()['total']
+            total_vluns_count += array.getVLUNs()['total']
+            
+            space_info = array.getStorageSystemInfo()
+            
+            total_used = total_used + space_info['allocatedCapacityMiB']
+            total_available = total_available + space_info['totalCapacityMiB']
 
-    #         available_volume_count += array_volume_cap
-    #         available_snapshot_count += array_snapshot_cap
-    #         available_host_count += array_host_cap
-    #         available_pgroup_count += array_pgroup_cap
+            perf_info = array.getCPGStatData('*', interval='hourly', history='2h')
 
-    #         total_volume_count += len(array.list_volumes(pending=True))
-    #         total_snapshot_count += len(array.list_volumes(snap=True,
-    #                                                        pending=True))
-    #         total_host_count += len(array.list_hosts())
+            throughput = perf_info['throughput']
+            bandwidth = adjust_size(perf_info['bandwidth'])
+            latency = perf_info['latency']
 
-    #         total_pgroup_count += len(array.list_pgroups(snap=False,
-    #                                                      pending=True))
-    #         space_info = array.get(space=True)
-    #         if isinstance(space_info, list):
-    #             space_info = space_info[0]
-    #         total_used = total_used + space_info['total']
-    #         total_available = total_available + space_info['capacity']
 
-    #     total_used = adjust_purity_size(total_used)
-    #     total_available = adjust_purity_size(total_available)
 
-    #     stats = {
-    #         'total_used': total_used,
-    #         'total_available': total_available,
-    #         'total_volume_count': total_volume_count,
-    #         'available_volume_count': available_volume_count,
-    #         'total_snapshot_count': total_snapshot_count,
-    #         'available_snapshot_count': available_snapshot_count,
-    #         'total_host_count': total_host_count,
-    #         'available_host_count': available_host_count,
-    #         'total_pgroup_count': total_pgroup_count,
-    #         'available_pgroup_count': available_pgroup_count,
-    #     }
-    #     return stats
 
+        # total_used = adjust_size(total_used)
+        # total_available = adjust_size(total_available)
+
+        stats = {
+            'total_used': total_used,
+            'total_available': total_available,
+            'total_volume_count': total_volume_count,
+            'available_volume_count': available_volume_count,
+            'total_vluns_count': total_vluns_count,
+            'available_vluns_count': available_vluns_count,
+            'throughput': throughput,
+            'bandwidth': bandwidth,
+            'latency': latency,
+        }
+        return stats
+    
     def get_array_list(self):
         return self._array_id_list
 
     def get_array_info(self, array_id, detailed=False):
         array = self._get_array(array_id)
+        storage_system_info = array.getStorageSystemInfo()
+
+        info = {}
         if array.error:
             info = {
                 'id': '1',
@@ -236,6 +225,9 @@ class FlashArrayAPI(object):
                 pass    
         info['cinder_name'] = array_id
         info['cinder_id'] = array_id
-        info['target'] = array._target
+        info['array_name'] = storage_system_info['name']
+        info['target'] = storage_system_info['IPv4Addr']
+        info['id'] = storage_system_info['id']
+        info['version'] = storage_system_info['systemVersion']
         LOG.debug('Found flash array info for %s: %s' % (array_id, str(info)))
         return base.APIDictWrapper(info)

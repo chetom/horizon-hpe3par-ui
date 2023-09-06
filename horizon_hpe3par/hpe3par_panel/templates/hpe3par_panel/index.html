@@ -24,24 +24,10 @@
       </div>
     </div>
     <div class="col-sm-4 d3_quota_bar">
-      <div class="pie-chart-usage" data-used="{% widthratio stats.total_snapshot_count stats.available_snapshot_count 100 %}"></div>
-      <div class="h5">{% trans "Snapshot Usage" %}</div>
+      <div class="pie-chart-usage" data-used="{% widthratio stats.total_vluns_count stats.available_vluns_count 100 %}"></div>
+      <div class="h5">{% trans "VLUNs Usage" %}</div>
       <div class="h6">
-         {% blocktrans with used=stats.total_snapshot_count|intcomma available=stats.available_snapshot_count|intcomma %}Used <span> {{ used }} </span> of <span> {{ available }} </span>{% endblocktrans %}
-      </div>
-    </div>
-    <div class="col-sm-4 d3_quota_bar">
-      <div class="pie-chart-usage" data-used="{% widthratio stats.total_host_count stats.available_host_count 100 %}"></div>
-      <div class="h5">{% trans "Host Usage" %}</div>
-      <div class="h6">
-         {% blocktrans with used=stats.total_host_count|intcomma available=stats.available_host_count|intcomma %}Used <span> {{ used }} </span> of <span> {{ available }} </span>{% endblocktrans %}
-      </div>
-    </div>
-    <div class="col-sm-4 d3_quota_bar">
-      <div class="pie-chart-usage" data-used="{% widthratio stats.total_pgroup_count stats.available_pgroup_count 100 %}"></div>
-      <div class="h5">{% trans "Protection Group Usage" %}</div>
-      <div class="h6">
-         {% blocktrans with used=stats.total_pgroup_count|intcomma available=stats.available_pgroup_count|intcomma %}Used <span> {{ used }} </span> of <span> {{ available }} </span>{% endblocktrans %}
+         {% blocktrans with used=stats.total_vluns_count|intcomma available=stats.available_vluns_count|intcomma %}Used <span> {{ used }} </span> of <span> {{ available }} </span>{% endblocktrans %}
       </div>
     </div>
 </div>

@@ -14,7 +14,7 @@ class HPE3ParFilterAction(tables.FilterAction):
 
 def get_hpe3par_url(array_info):
     LOG.debug('Building url for array %s' % array_info.cinder_id)
-    return 'https://%s/' % array_info.target
+    return 'ssh://%s/' % array_info.target
 
 
 def get_detail_url(array_info):
