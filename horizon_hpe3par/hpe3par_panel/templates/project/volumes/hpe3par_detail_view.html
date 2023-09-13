@@ -49,11 +49,13 @@
     <dd>{{ volume.created_at|parse_date }}</dd>
   </dl>
 
-  <h4>{% trans "HPE 3Par Info" %}</h4>
+  <h4>{% trans "Cinder Volume Information" %}</h4>
   <hr class="header_rule">
   <dl class="dl-horizontal">
     <dt>{% trans "Volume Name" %}</dt>
     <dd>{{ volume.vv_name }}</dd>
+    <dt>{% trans "Array Name" %}</dt>
+    <dd>{{ volume.array_name }}</dd>
   </dl>
 
   <h4>{% trans "Attachments" %}</h4>

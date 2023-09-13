@@ -12,7 +12,7 @@ HPE3PAR_FLASH_ARRAYS = [
 
         # The backend name for the FlashArray, typically this is the value
         # set in the "enabled_backends" section of cinder.conf
-        'backend_name': '3par-Array-fc',
+        'backend_name': 'yyyyyyyyyy',
     },
     # Repeat for additional arrays
 ]

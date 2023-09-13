@@ -30,7 +30,7 @@
     <dd>{{ array.cinder_name }}</dd>
     <dt>{% trans "Array Name" %}</dt>
     <dd>{{ array.array_name }}</dd>
-    <dt>{% trans "HPE 3Par WSAPI" %}</dt>
+    <dt>{% trans "HPE 3Par SSH" %}</dt>
     <dd><a href="ssh://{{ array.target }}" target="_blank">ssh://{{ array.target }}</a></dd>
     <dt>{% trans "INFORM OS Version" %}</dt>
     <dd>{{ array.version }}</dd>
@@ -45,13 +45,18 @@
     <dd>{{ array.total_available|mb_float_format }}</dd>
     <dt>{% trans "Used" %}</dt>
     <dd>{{ array.total_used|mb_float_format }}</dd>
-    <dt>{% trans "Data Reduction" %}</dt>
-    <dd>{{ array.data_reduction }}</dd>
-    <dt>{% trans "Thin Provisioning" %}</dt>
-    <dd>{{ array.thin_provisioning }}</dd>
+    <dt>{% trans "Data Deduplication" %}</dt>
+    <dd>{{ array.deduplication }}</dd>
+    <dt>{% trans "Data Compression" %}</dt>
+    <dd>{{ array.compression }}</dd>
     <dt>{% trans "Total Reduction" %}</dt>
-    <dd>{{ array.total_reduction }}</dd>
+    <dd>{{ array.data_reduction }}</dd>
+    <dt>{% trans "Compaction" %}</dt>
+    <dd>{{ array.compaction }}</dd>
+    <dt>{% trans "OverProvisioning" %}</dt>
+    <dd>{{ array.over_provisioning }}</dd>
   </dl>
+
 
   <h4>{% trans "Performance" %}</h4>
   <hr class="header_rule">

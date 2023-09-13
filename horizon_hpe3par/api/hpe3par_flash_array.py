@@ -1,32 +1,46 @@
-from django.conf import settings
-import logging
-from hpe3parclient import client, exceptions
+# Copyright (c) 2016 Pure Storage, Inc.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+#
+# Modifications copyright (C) 2023 chetom
+
+
 import re
+import logging
 
+from django.conf import settings
+from hpe3parclient import client, exceptions
 from openstack_dashboard.api import base
-
 from horizon_hpe3par.api import cinder as hpe3par_cinder_api
 
 
 LOG = logging.getLogger(__name__)
 
 SIZE_KEYS = [
-    'capacity',
-    'snapshots',
-    'volumes',
-    'total',
-    'shared_space',
-    'bandwidth',
+    'bandwidth'
 ]
 RATIO_KEYS = [
+    'deduplication',
+    'compression',
     'data_reduction',
-    'thin_provisioning',
-    'total_reduction'
+    'compaction',
+    'over_provisioning'
 ]
 
 
-def adjust_size(mib):
-    return mib / (1024 ** 2)
+def adjust_size(kib):
+    return kib / 1024
 
 class ErrorStateArray(client.HPE3ParClient):
     def __init__(self, target, e):
@@ -51,7 +65,9 @@ class FlashArrayAPI(object):
     def _get_array_from_conf(self, conf):
         try:
             array = client.HPE3ParClient(conf['wsapi_url'])
-            array.setSSHOptions(ip=conf['ssh_ip'], login=conf['ssh_user'], password=conf['ssh_password'])
+            array.setSSHOptions(ip=conf['ssh_ip'],
+                                login=conf['ssh_user'],
+                                password=conf['ssh_password'])
             array.login(conf['wsapi_user'], conf['wsapi_password'])
             array.error = None
             return array
@@ -132,7 +148,9 @@ class FlashArrayAPI(object):
             if not stats:
                 LOG.debug('Failed to find volume %s on any configured arrays!'
                           % volume.id)
-
+        stats.update({
+            'array_name': backend,
+            })
         stats.update(volume.to_dict())
         return hpe3par_cinder_api.HPE3ParVolume(base.APIDictWrapper(stats))
 
@@ -166,32 +184,33 @@ class FlashArrayAPI(object):
         available_vluns_count = 0
 
         if not array.error:
-            info = {}
             array_volume_cap = 16384
             array_vluns_cap = 131072
-            
+
             available_volume_count += array_volume_cap
             available_vluns_count += array_vluns_cap
-            
+
             total_volume_count += array.getVolumes()['total']
             total_vluns_count += array.getVLUNs()['total']
-            
-            space_info = array.getStorageSystemInfo()
-            
-            total_used = total_used + space_info['allocatedCapacityMiB']
-            total_available = total_available + space_info['totalCapacityMiB']
+
+            space_info = array.getOverallSystemCapacity()
+
+            total_used = total_used + space_info['allCapacity']['allocated']['totalAllocatedMiB']
+            total_available = total_available + space_info['allCapacity']['totalMiB']
+
+            efficiency_info = space_info['allCapacity']['allocated']['volumes']['capacityEfficiency']
+
+            deduplication = efficiency_info.get('deduplication', 1)
+            compression = efficiency_info.get('compression', 1)
+            data_reduction = efficiency_info.get('dataReduction', 1)
+            compaction = efficiency_info.get('compaction', 1)
+            over_provisioning = efficiency_info.get('overProvisioning', 1)
 
             perf_info = array.getCPGStatData('*', interval='hourly', history='2h')
 
             throughput = perf_info['throughput']
-            bandwidth = adjust_size(perf_info['bandwidth'])
+            bandwidth = perf_info['bandwidth']
             latency = perf_info['latency']
-
-
-
-
-        # total_used = adjust_size(total_used)
-        # total_available = adjust_size(total_available)
 
         stats = {
             'total_used': total_used,
@@ -203,9 +222,14 @@ class FlashArrayAPI(object):
             'throughput': throughput,
             'bandwidth': bandwidth,
             'latency': latency,
+            'deduplication': deduplication,
+            'compression': compression,
+            'data_reduction': data_reduction,
+            'compaction': compaction,
+            'over_provisioning': over_provisioning,
         }
         return stats
-    
+
     def get_array_list(self):
         return self._array_id_list
 
@@ -229,5 +253,10 @@ class FlashArrayAPI(object):
         info['target'] = storage_system_info['IPv4Addr']
         info['id'] = storage_system_info['id']
         info['version'] = storage_system_info['systemVersion']
+        for key in info:
+            if key in SIZE_KEYS:
+                info[key] = adjust_size(info[key])
+            if key in RATIO_KEYS:
+                info[key] = "%.2f to 1" % info[key]
         LOG.debug('Found flash array info for %s: %s' % (array_id, str(info)))
         return base.APIDictWrapper(info)
