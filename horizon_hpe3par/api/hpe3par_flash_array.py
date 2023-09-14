@@ -245,6 +245,8 @@ class FlashArrayAPI(object):
             }
         else:
             info['status'] = 'Connected'
+            stats = self.get_array_stats(array_id)
+            info.update(stats)
             if detailed:
                 pass    
         info['cinder_name'] = array_id

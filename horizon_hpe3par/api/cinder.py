@@ -25,7 +25,7 @@ from openstack_dashboard.api import cinder
 
 class HPE3ParVolume(cinder.Volume):
     _hpe3par_attrs = [
-        'aray_name'
+        'array_name',
         'vv_name',
     ]
 
