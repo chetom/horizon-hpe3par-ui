@@ -54,6 +54,15 @@ class HPE3ParFlashArrayTable(tables.DataTable):
     )
     array_name = tables.Column('array_name', verbose_name=_('Array Name'))
     status = tables.Column('status', verbose_name=_('Status'))
+    total_volume_count = tables.Column('total_volume_count',
+                                       verbose_name=_('Number Of Volumes'))
+    total_available = tables.Column('total_available',
+                                    verbose_name=_('Total Space'),
+                                    filters=[sizeformat.mb_float_format])
+    total_used = tables.Column('total_used', verbose_name=_('Used Space'),
+                               filters=[sizeformat.mb_float_format])
+    data_reduction = tables.Column('data_reduction',
+                                   verbose_name=_('Data Reduction'))
     version = tables.Column('version', verbose_name=_('Inform OS Version'))
 
     class Meta(object):
