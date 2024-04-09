@@ -15,8 +15,7 @@
 #
 # Modifications copyright (C) 2023 chetom
 
-
-from django.conf.urls import url
+from django.urls import re_path as url
 from horizon_hpe3par.hpe3par_panel.flasharrays import views
 
 

@@ -16,7 +16,7 @@
 # Modifications copyright (C) 2023 chetom
 
 
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from horizon import exceptions
 from horizon import tabs
 from horizon_hpe3par.api import hpe3par_flash_array

@@ -17,7 +17,7 @@
 
 
 from django.conf.urls import include
-from django.conf.urls import url
+from django.urls import re_path as url
 from horizon_hpe3par.hpe3par_panel import views
 from horizon_hpe3par.hpe3par_panel.flasharrays import urls as array_urls
 
